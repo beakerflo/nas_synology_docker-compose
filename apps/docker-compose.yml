@@ -1,0 +1,111 @@
+version: '3.9'
+
+networks:
+  01-frontend:
+    external:
+      name: "01-frontend"
+  02-backend:
+    external:
+      name: "02-backend"
+  03-appnet:
+    external:
+      name: "03-appnet"
+      
+services:
+
+  calibre:
+    image: ghcr.io/linuxserver/calibre:latest
+    container_name: calibre
+    restart: unless-stopped
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - UMASK_SET=022 #optional
+      - CLI_ARGS= #optional
+    volumes:
+      - ./calibre:/config
+      - ./calibre/add_books:/books_add
+      - /volume1/ebooks:/books
+    ports:
+      - 8082:8080
+      - 8083:8081
+    networks:
+      - "03-appnet"
+
+  mariadb:
+    image: ghcr.io/linuxserver/mariadb:latest
+    container_name: mariadb
+    restart: unless-stopped
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - MYSQL_ROOT_PASSWORD=$MYSQL_PWD
+      - TZ=$TZ
+    volumes:
+      - ./mariadb:/config
+    networks:
+      - "02-backend"
+
+  portainer:
+    image: portainer/portainer-ce:alpine
+    container_name: portainer
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    ports:
+      - 9000:9000
+      - 8000:8000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portainer:/data
+    networks:
+      - "03-appnet"
+ 
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    entrypoint: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    environment:
+      - TZ=$TZ
+    volumes:
+      - ./redis:/data
+    networks:
+      - "01-frontend"
+
+  torrentvpn:
+    image: haugene/transmission-openvpn:latest
+    container_name: torrentvpn
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - ./torrentvpn/data:/data
+      - ./torrentvpn/config:/config
+      - ./torrentvpn/home:/transmission_home
+      - /volume1/downloads/complete:/downloads
+      - /volume1/downloads/incomplete:/incomplete
+      - /volume1/downloads/torrent_watch:/watch
+      - ./torrentvpn/config/resolv.conf:/etc/resolv.conf
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - UMASK=022
+      - LOCAL_NETWORK=$APPNET
+      - OPENVPN_PROVIDER=$OPENVPN_PROVIDER
+      - OPENVPN_USERNAME=$OPENVPN_USERNAME
+      - OPENVPN_PASSWORD=$OPENVPN_PASSWORD
+      - TRANSMISSION_WATCH_DIR=/watch
+      - TRANSMISSION_DOWNLOAD_DIR=/downloads
+      - TRANSMISSION_INCOMPLETE_DIR=/incomplete
+      - TRANSMISSION_HOME=/transmission_home
+      - TRANSMISSION_RPC_PASSWORD=stolp_tosee
+      - TRANSMISSION_RPC_USERNAME=boerderij
+      - TRANSMISSION_UMASK=002
+      - TRANSMISSION_RATIO_LIMIT=1
+      - TRANSMISSION_RATIO_LIMIT_ENABLED=true
+    ports:
+      - 8888:8888
+      - 9091:9091
+    networks:
+      - "03-appnet"

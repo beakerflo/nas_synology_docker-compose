@@ -1,0 +1,56 @@
+  transmission-vpn:
+    container_name: transmission-vpn
+    image: haugene/transmission-openvpn
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    restart: always
+#    ports:
+#    - "XXXX:9091"
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${USERDIR}/docker/transmission-vpn:/data
+      - ${USERDIR}/docker/shared:/shared
+      - ${USERDIR}/Downloads:/data/watch
+      - ${USERDIR}/Downloads/completed:/data/completed
+      - ${USERDIR}/Downloads/incomplete:/data/incomplete
+    environment:
+      - OPENVPN_PROVIDER=IPVANISH
+      - OPENVPN_USERNAME=ipvanish_username
+      - OPENVPN_PASSWORD=ipvanish_password
+      - OPENVPN_CONFIG="YYYYYYYYYYY" 
+      - OPENVPN_OPTS=--inactive 3600 --ping 10 --ping-exit 60
+      - LOCAL_NETWORK=192.168.1.0/24
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - TRANSMISSION_RPC_AUTHENTICATION_REQUIRED=true
+      - TRANSMISSION_RPC_HOST_WHITELIST="127.0.0.1,192.168.*.*"
+      - TRANSMISSION_RPC_PASSWORD=webui_password
+      - TRANSMISSION_RPC_USERNAME=webui_username
+      - TRANSMISSION_UMASK=002
+      - TRANSMISSION_RATIO_LIMIT=1.00
+      - TRANSMISSION_RATIO_LIMIT_ENABLED=true
+    networks:
+      - t1_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=transmission-vpn"
+#      - "traefik.frontend.rule=Host:${DOMAINNAME}; PathPrefix: /transmission"
+      - "traefik.frontend.rule=Host:transmission.${DOMAINNAME}"
+      - "traefik.port=9091"
+      - "traefik.docker.network=t1_proxy"
+      - "traefik.frontend.headers.SSLRedirect=true"
+      - "traefik.frontend.headers.STSSeconds=315360000"
+      - "traefik.frontend.headers.browserXSSFilter=true"
+      - "traefik.frontend.headers.contentTypeNosniff=true"
+      - "traefik.frontend.headers.forceSTSHeader=true"
+      - "traefik.frontend.headers.SSLHost=example.com"
+      - "traefik.frontend.headers.STSIncludeSubdomains=true"
+      - "traefik.frontend.headers.STSPreload=true"
+#      - "traefik.frontend.headers.frameDeny: true" #customFrameOptionsValue overrides this
+      - "traefik.frontend.headers.customFrameOptionsValue: allow-from https:${DOMAINNAME}"

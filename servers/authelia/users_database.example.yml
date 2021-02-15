@@ -1,0 +1,15 @@
+users:
+  authelia:
+    password: 
+    displayname: Admin User
+    email: floris@entermi.nl
+    groups:
+    - admins
+    - dev
+  bkrflo:
+    password: 
+    displayname: Floris van Enter
+    email: floris@vanenter.nl
+    groups:
+    - admins
+    - dev

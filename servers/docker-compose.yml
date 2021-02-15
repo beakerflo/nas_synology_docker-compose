@@ -1,0 +1,388 @@
+version: '3.9'
+
+networks:   
+  01-frontend:
+    external:
+      name: "01-frontend"
+  02-backend:
+    external:
+      name: "02-backend"
+
+services:
+
+  authelia:
+    image: authelia/authelia
+    container_name: authelia
+    restart: always
+    depends_on:
+      - traefik
+    environment:
+      - TZ=$TZ
+    expose:
+      - 9091
+    volumes:
+      - ./authelia:/config
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.authelia.loadbalancer.server.port=9091
+      - traefik.http.routers.authelia-rtrs.service=authelia
+      - traefik.http.routers.authelia-rtrs.rule=Host(`$URL_AUTHELIA`)
+      - traefik.http.routers.authelia-rtrs.entrypoints=websecure
+      - traefik.http.routers.authelia-rtrs.tls=true
+      - traefik.http.routers.authelia-rtrs.tls.certresolver=myresolver
+      - traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://$URL_AUTHELIA/
+      - traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email
+
+  bazarr:
+    image: ghcr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - UMASK=022
+    volumes:
+      - ./bazarr/config:/config
+      - /volume2/movies:/movies
+      - /volume2/tvshows:/tv
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.bazarr-rtr.entrypoints=web
+      - traefik.http.routers.bazarr-rtr.service=bazarr
+      - traefik.http.services.bazarr.loadbalancer.server.port=6767
+      - traefik.http.routers.bazarr-rtr.rule=HostHeader(`$URL_BAZARR`)
+      - traefik.http.routers.bazarr-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.bazarr-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.bazarr-rtrs.service=bazarr
+      - traefik.http.routers.bazarr-rtrs.tls=true
+      - traefik.http.routers.bazarr-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.bazarr-rtrs.tls.domains[0].main=$URL_BAZARR
+      - traefik.http.routers.bazarr-rtrs.entrypoints=websecure
+      - traefik.http.routers.bazarr-rtrs.rule=HostHeader(`$URL_BAZARR`)
+
+  calibreweb:
+    image: linuxserver/calibre-web:latest
+    container_name: calibreweb
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - SET_CONTAINER_TIMEZONE=true
+      - DOCKER_MODS=linuxserver/calibre-web:calibre
+    volumes:
+      - ./calibreweb:/config
+      - /volume1/ebooks:/books
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.calibreweb-rtr.entrypoints=web
+      - traefik.http.routers.calibreweb-rtr.service=calibreweb
+      - traefik.http.services.calibreweb.loadbalancer.server.port=8083
+      - traefik.http.routers.calibreweb-rtr.rule=HostHeader(`$URL_CALIBREWEB`)
+      - traefik.http.routers.calibreweb-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.calibreweb-rtrs.entrypoints=websecure
+      - traefik.http.routers.calibreweb-rtrs.tls.domains[0].main=$URL_CALIBREWEB
+      - traefik.http.routers.calibreweb-rtrs.tls=true
+      - traefik.http.routers.calibreweb-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.calibreweb-rtrs.service=calibreweb
+      - traefik.http.routers.calibreweb-rtrs.rule=HostHeader(`$URL_CALIBREWEB`)
+
+  gitlab:
+    image: gitlab/gitlab-ee:latest
+    container_name: gitlab
+    environment:
+      - GITLAB_OMNIBUS_CONFIG="from_file('/omnibus_config.rb')"
+    ports:
+      - 223:22
+    volumes:
+      - ./gitlab/data:/var/opt/gitlab
+      - ./gitlab/logs:/var/log/gitlab
+      - ./gitlab/config:/etc/gitlab
+      - ./gitlab/gitlab.rb:/omnibus_config.rb
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gitlab-rtr.entrypoints=web
+      - traefik.http.routers.gitlab-rtr.service=gitlab
+      - traefik.http.routers.gitlab-rtr.rule=HostHeader(`$URL_GITLAB`)
+      - traefik.http.routers.gitlab-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.gitlab-rtrs.entrypoints=websecure
+      - traefik.http.routers.gitlab-rtrs.service=gitlab
+      - traefik.http.routers.gitlab-rtrs.tls=true
+      - traefik.http.routers.gitlab-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.gitlab-rtrs.tls.domains[0].main=$URL_GITLAB
+      - traefik.http.routers.gitlab-rtrs.rule=HostHeader(`$URL_GITLAB`)
+      - traefik.http.services.gitlab.loadbalancer.server.port=80
+      - traefik.tcp.routers.gitlab-ssh.entrypoints=ssh
+      - traefik.tcp.routers.gitlab-ssh.rule=HostSNI(`$URL_GITLAB`)
+      - traefik.http.routers.gitlab-ssh.tls=true
+      - traefik.http.routers.gitlab-ssh.tls.certresolver=myresolver
+      - traefik.http.routers.gitlab-ssh.tls.domains[0].main=$URL_GITLAB
+      - traefik.http.routers.gitlab-ssh.rule=HostHeader(`$URL_GITLAB`)
+      - traefik.tcp.services.gitlab-ssh.loadbalancer.server.port=22
+
+  lidarr:
+    image: ghcr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - UMASK=022
+    volumes:
+      - ./lidarr:/config
+      - /volume1/audio/music:/music
+      - /volume1/downloads/complete:/downloads
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.lidarr-rtr.entrypoints=web
+      - traefik.http.routers.lidarr-rtr.service=lidarr
+      - traefik.http.services.lidarr.loadbalancer.server.port=8686
+      - traefik.http.routers.lidarr-rtr.rule=HostHeader(`$URL_LIDARR`)
+      - traefik.http.routers.lidarr-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.lidarr-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.lidarr-rtrs.service=lidarr
+      - traefik.http.routers.lidarr-rtrs.tls=true
+      - traefik.http.routers.lidarr-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.lidarr-rtrs.tls.domains[0].main=$URL_LIDARR
+      - traefik.http.routers.lidarr-rtrs.entrypoints=websecure
+      - traefik.http.routers.lidarr-rtrs.rule=HostHeader(`$URL_LIDARR`)
+
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin:latest
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    environment:
+      - PMA_ARBITRARY=1
+    volumes:
+      - ./phpmyadmin/config.inc.php:/var/www/html/config.inc.php
+    networks:
+      - "01-frontend"
+      - "02-backend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.phpmyadmin-rtr.entrypoints=web
+      - traefik.http.routers.phpmyadmin-rtr.service=phpmyadmin
+      - traefik.http.services.phpmyadmin.loadbalancer.server.port=80
+      - traefik.http.routers.phpmyadmin-rtr.rule=HostHeader(`$URL_PHPMYADMIN`)
+      - traefik.http.routers.phpmyadmin-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.phpmyadmin-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.phpmyadmin-rtrs.service=phpmyadmin
+      - traefik.http.routers.phpmyadmin-rtrs.tls=true
+      - traefik.http.routers.phpmyadmin-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.phpmyadmin-rtrs.tls.domains[0].main=$URL_PHPMYADMIN
+      - traefik.http.routers.phpmyadmin-rtrs.entrypoints=websecure
+      - traefik.http.routers.phpmyadmin-rtrs.rule=HostHeader(`$URL_PHPMYADMIN`)
+
+  radarr:
+    image: ghcr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - UMASK=022
+    volumes:
+      - ./radarr:/config
+      - /volume2/movies:/movies
+      - /volume1/downloads/complete:/downloads
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.radarr-rtr.entrypoints=web
+      - traefik.http.routers.radarr-rtr.service=radarr
+      - traefik.http.services.radarr.loadbalancer.server.port=7878
+      - traefik.http.routers.radarr-rtr.rule=HostHeader(`$URL_RADARR`)
+      - traefik.http.routers.radarr-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.radarr-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.radarr-rtrs.service=radarr
+      - traefik.http.routers.radarr-rtrs.tls=true
+      - traefik.http.routers.radarr-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.radarr-rtrs.tls.domains[0].main=$URL_RADARR
+      - traefik.http.routers.radarr-rtrs.entrypoints=websecure
+      - traefik.http.routers.radarr-rtrs.rule=HostHeader(`$URL_RADARR`)
+
+  sabnzbd:
+    image: ghcr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+    volumes:
+      - ./sabnzbd:/config
+      - /volume1/downloads/complete:/downloads
+      - /volume1/downloads/nzb_watch:/nzb_watch
+      - /volume1/downloads/incomplete_sab:/incomplete-downloads
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sabnzbd-rtr.entrypoints=web
+      - traefik.http.routers.sabnzbd-rtr.service=sabnzbd
+      - traefik.http.services.sabnzbd.loadbalancer.server.port=8080
+      - traefik.http.routers.sabnzbd-rtr.rule=HostHeader(`$URL_SABNZBD`)
+      - traefik.http.routers.sabnzbd-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.sabnzbd-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.sabnzbd-rtrs.service=sabnzbd
+      - traefik.http.routers.sabnzbd-rtrs.tls=true
+      - traefik.http.routers.sabnzbd-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.sabnzbd-rtrs.tls.domains[0].main=$URL_SABNZBD
+      - traefik.http.routers.sabnzbd-rtrs.entrypoints=websecure
+      - traefik.http.routers.sabnzbd-rtrs.rule=HostHeader(`$URL_SABNZBD`)
+
+  sonarr:
+    image: ghcr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - UMASK=022
+    volumes:
+      - ./sonarr:/config
+      - /volume2/tvshows:/tv
+      - /volume1/downloads/complete:/downloads
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sonarr-rtr.entrypoints=web
+      - traefik.http.routers.sonarr-rtr.service=sonarr
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989
+      - traefik.http.routers.sonarr-rtr.rule=HostHeader(`$URL_SONARR`)
+      - traefik.http.routers.sonarr-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.sonarr-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.sonarr-rtrs.service=sonarr
+      - traefik.http.routers.sonarr-rtrs.tls=true
+      - traefik.http.routers.sonarr-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.sonarr-rtrs.tls.domains[0].main=$URL_SONARR
+      - traefik.http.routers.sonarr-rtrs.entrypoints=websecure
+      - traefik.http.routers.sonarr-rtrs.rule=HostHeader(`$URL_SONARR`)
+
+  web:
+    image: nginx:latest
+    container_name: web
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    volumes:
+      - ./web:/usr/share/nginx/html
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.web-rtr.entrypoints=web
+      - traefik.http.routers.web-rtr.service=web
+      - traefik.http.services.web.loadbalancer.server.port=80
+      - traefik.http.routers.web-rtr.rule=HostHeader(`$URL_WEB0`) || HostHeader(`$URL_WEB1`)
+      - traefik.http.routers.web-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.web-rtrs.tls.domains[0].main=$URL_WEB0
+      - traefik.http.routers.web-rtrs.tls.domains[1].main=$URL_WEB1
+      - traefik.http.routers.web-rtrs.tls=true
+      - traefik.http.routers.web-rtrs.service=web
+      - traefik.http.routers.web-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.web-rtrs.entrypoints=websecure
+      - traefik.http.routers.web-rtrs.rule=HostHeader(`$URL_WEB0`) || HostHeader(`$URL_WEB1`)
+
+  stolpweb:
+    image: nginx:latest
+    container_name: stolpweb
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    volumes:
+      - ./stolpweb:/usr/share/nginx/html
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.stolpweb-rtr.entrypoints=web
+      - traefik.http.routers.stolpweb-rtr.service=stolpweb
+      - traefik.http.services.stolpweb.loadbalancer.server.port=80
+      - traefik.http.routers.stolpweb-rtr.rule=HostHeader(`$URL_STOLPWEB`)
+      - traefik.http.routers.stolpweb-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.stolpweb-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.stolpweb-rtrs.tls.domains[0].main=$URL_STOLPWEB
+      - traefik.http.routers.stolpweb-rtrs.tls=true
+      - traefik.http.routers.stolpweb-rtrs.service=stolpweb
+      - traefik.http.routers.stolpweb-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.stolpweb-rtrs.entrypoints=websecure
+      - traefik.http.routers.stolpweb-rtrs.rule=HostHeader(`$URL_STOLPWEB`)
+
+  traefik:
+    image: traefik
+    container_name: traefik
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    command: 
+      - --log.level=DEBUG
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.swarmMode=false
+      - --providers.file.directory=/rules
+      - --providers.file.watch=true
+      - --entryPoints.web.address=:80
+      - --entryPoints.websecure.address=:443
+      - --entryPoints.ssh.address=:22
+      - --accesslog=true
+      - --accesslog.filepath=/data/access.log
+      - --certificatesResolvers.myresolver.acme.httpChallenge=true
+#      - --certificatesResolvers.myresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
+      - --certificatesResolvers.myresolver.acme.httpChallenge.entryPoint=web
+      - --certificatesResolvers.myresolver.acme.email=floris@vanenter.nl
+      - --certificatesResolvers.myresolver.acme.storage=/letsencrypt/acme.json
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik/data:/data
+      - ./traefik/letsencrypt:/letsencrypt
+      - ./traefik/rules:/rules
+    networks:
+      - "01-frontend"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik-rtr.rule=HostHeader(`$URL_TRAEFIK`)
+      - traefik.http.routers.traefik-rtr.entrypoints=web
+      - traefik.http.routers.traefik-rtr.service=api@internal
+      - traefik.http.routers.traefik-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.traefik-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.traefik-rtrs.rule=HostHeader(`$URL_TRAEFIK`)
+      - traefik.http.routers.traefik-rtrs.entrypoints=websecure
+      - traefik.http.routers.traefik-rtrs.service=api@internal
+      - traefik.http.routers.traefik-rtrs.tls=true
+      - traefik.http.routers.traefik-rtrs.tls.domains[0].main=$URL_TRAEFIK
+      - traefik.http.routers.traefik-rtrs.tls.certresolver=myresolver

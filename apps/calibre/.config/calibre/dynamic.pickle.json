@@ -1,0 +1,13 @@
+{
+  "add books dialog dir": "/config/add_books",
+  "change cover dialog": "/config/add_books",
+  "database location dialog": "/books",
+  "notified-version-updates": {
+    "__class__": "set",
+    "__value__": [
+      "5.11"
+    ]
+  },
+  "welcome_wizard_device": "kobo_vox",
+  "welcome_wizard_was_run": true
+}

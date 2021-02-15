@@ -1,0 +1,32 @@
+ gitea:
+    image: gitea/gitea:1.13.1
+    container_name: gitea
+    environment:
+      - USER_UID=1026
+      - USER_GID=100
+      - TZ=Europe/Amsterdam
+      - DB_TYPE=mysql
+      - DB_HOST=mariadb:3306
+      - DB_NAME=gitea
+      - DB_USER=gitea
+      - DB_PASSWD=gitea
+    restart: unless-stopped
+    volumes:
+      - ./gitea:/data
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 3000:3000
+      - 222:22
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gitea.entrypoints=web
+      - traefik.http.routers.gitea.service=gitea
+      - traefik.http.services.gitea.loadbalancer.server.port=3000
+      - traefik.http.routers.gitea.rule=Host(`stolp.vanenter.nl`) && PathPrefix(`/gitea`)
+      - traefik.http.routers.gitea.middlewares=redirect@file
+      - traefik.http.routers.gitea-s.service=gitea
+      - traefik.http.routers.gitea-s.tls=true
+      - traefik.http.routers.gitea-s.tls.certresolver=myresolver
+      - traefik.http.routers.gitea-s.entrypoints=websecure
+      - traefik.http.services.gitea-s.loadbalancer.server.port=3000
+      - traefik.http.routers.gitea-s.rule=Host(`stolp.vanenter.nl`) && PathPrefix(`/gitea`)

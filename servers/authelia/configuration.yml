@@ -1,0 +1,85 @@
+###############################################################
+#                   Authelia configuration                    #
+###############################################################
+
+host: 0.0.0.0
+port: 9091
+log_level: debug
+# This secret can also be set using the env variables AUTHELIA_JWT_SECRET_FILE
+jwt_secret: GJpLr9zU2woE5cyEnFBIvaBxhilQHYUF0qF642h3rn1TM6RZd1se5e1cMZpjjZR
+default_redirection_url: https://stolp.liefdelaan.nl
+totp:
+  issuer: authelia.com
+
+#duo_api:
+#  hostname: api-123456789.example.com
+#  integration_key: ABCDEF
+#  # This secret can also be set using the env variables AUTHELIA_DUO_API_SECRET_KEY_FILE
+#  secret_key: 1234567890abcdefghifjkl
+
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+  disable_reset_password: false
+
+access_control:
+  default_policy: deny
+  rules:
+    # Rules applied to everyone
+    - domain: boeken.vanenter.nl
+      policy: bypass
+    - domain: bazarr.liefdelaan.nl
+      policy: one_factor
+    - domain: hassio.liefdelaan.nl
+      policy: bypass
+    - domain: lidarr.liefdelaan.nl
+      policy: one_factor
+    - domain: liefdelaan.nl
+      policy: bypass
+    - domain: www.liefdelaan.nl
+      policy: bypass
+    - domain: mysql.liefdelaan.nl
+      policy: one_factor
+    - domain: nas.liefdelaan.nl
+      policy: one_factor
+    - domain: radarr.liefdelaan.nl
+      policy: one_factor
+    - domain: sabnzbd.liefdelaan.nl
+      policy: one_factor
+    - domain: sonarr.liefdelaan.nl
+      policy: one_factor
+    - domain: stolp.liefdelaan.nl
+      policy: one_factor
+    - domain: traefik.liefdelaan.nl
+      policy: one_factor
+
+session:
+  name: authelia_session
+  # This secret can also be set using the env variables AUTHELIA_SESSION_SECRET_FILE
+  secret: VP1gJCh59SDQQDfqf672dW0QQTjJwbRi6RlR3Z3RCd8X18DkKTp0RckNv3P9h4t
+  expiration: 7200 # 1 hour
+  inactivity: 600 # 5 minutes
+  domain: liefdelaan.nl # Should match whatever your root protected domain is
+
+  redis:
+    host: redis
+    port: 6379
+    # This secret can also be set using the env variables AUTHELIA_SESSION_REDIS_PASSWORD_FILE
+    # password: authelia
+
+regulation:
+  max_retries: 3
+  find_time: 120
+  ban_time: 300
+
+storage:
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  smtp:
+    username: liefdelaan@ziggo.nl
+    password: KORN@ciss3fism3crow
+    host: smtp.ziggo.nl
+    port: 587 # Or 465
+    sender: liefdelaan@ziggo.nl

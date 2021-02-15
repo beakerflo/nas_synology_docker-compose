@@ -1,0 +1,15 @@
+  gitlab:
+    image: gitlab/gitlab-ce
+    restart: always
+    container_name: gitlab
+    environment:
+      GITLAB_SSH_PORT: 2200
+    ports:
+      - 2200:22
+      - 8800:80
+    volumes:
+      - ./gitlab/config:/etc/gitlab'
+      - ./gitlab/log:/var/log/gitlab'
+      - ./gitlab/data:/var/opt/gitlab'
+      - ./gitlab/pages:/var/opt/gitlab/gitlab-rails/shared/pages'
+      - ./gitlab/ssl:/etc/gitlab/ssl'

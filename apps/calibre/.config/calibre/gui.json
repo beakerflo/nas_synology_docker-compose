@@ -1,0 +1,159 @@
+{
+  "basic_metadata_widget_splitter_state": {
+    "__class__": "bytearray",
+    "__value__": "AAAA/wAAAAEAAAADAAAA+wAAAWgAAAEZAf////8BAAAAAQA="
+  },
+  "book_details_splitter_horizontal_state": [
+    true,
+    200
+  ],
+  "book_list_pin_splitter_state": {
+    "__class__": "bytearray",
+    "__value__": "AAAA/wAAAAEAAAACAAABAAAAAEYA/////wEAAAABAA=="
+  },
+  "cover_browser_splitter_vertical_state": [
+    false,
+    300
+  ],
+  "custom_colors_for_color_dialog": [
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ],
+    [
+      255,
+      255,
+      255,
+      255
+    ]
+  ],
+  "diff_dialog_geom": {
+    "__class__": "bytearray",
+    "__value__": "AdnQywADAAAAAAGaAAAAAAAABVEAAAPEAAABmwAAABQAAAVQAAADvwAAAAAAAAAABwAAAAGbAAAAFAAABVAAAAO/"
+  },
+  "duplicates-question-dialog-geometry": {
+    "__class__": "bytearray",
+    "__value__": "AdnQywADAAAAAAGvAAAAIAAAA84AAAGzAAABsAAAADQAAAPNAAABrgAAAAAAAAAABZQAAAGwAAAANAAAA80AAAGu"
+  },
+  "grid view visible": false,
+  "jobs view column layout3": {
+    "__class__": "bytearray",
+    "__value__": "AAAA/wAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfQAAAAFAQEBAAAAAAAAAAAAAAAAAGT/////AAAAhAAAAAAAAAAFAAAAZAAAAAEAAAAAAAAAZAAAAAEAAAAAAAAAZAAAAAEAAAAAAAAAZAAAAAEAAAAAAAAAZAAAAAEAAAAAAAAD6AAAAAAA"
+  },
+  "jobs_dialog_geometry": {
+    "__class__": "bytearray",
+    "__value__": "AdnQywADAAAAAAI5AAAAvQAABLMAAALzAAACOgAAANEAAASyAAAC7gAAAAAAAAAABwAAAAI6AAAA0QAABLIAAALu"
+  },
+  "library_usage_stats": {
+    "/books": 11
+  },
+  "metadata-download-identify-widget-splitter-state": {
+    "__class__": "bytearray",
+    "__value__": "AAAA/wAAAAEAAAACAAACAAAAAQAA/////wEAAAABAA=="
+  },
+  "metadata_single_gui_geom": {
+    "__class__": "bytearray",
+    "__value__": "AdnQywADAAAAAAHLAAAArwAABR4AAAMfAAABzAAAAMMAAAUdAAADGgAAAAAAAAAABqwAAAHMAAAAwwAABR0AAAMa"
+  },
+  "metasingle_window_geometry3": {
+    "__class__": "bytearray",
+    "__value__": "AdnQywADAAAAAAESAAAASwAABYUAAAJ8AAABEwAAAF8AAAWEAAACdwAAAAAAAAAABqwAAAETAAAAXwAABYQAAAJ3"
+  },
+  "quick_start_guide_added": true,
+  "quickview visible": false,
+  "recently_used_languages": [
+    "English",
+    "Dutch"
+  ],
+  "search bar visible": true,
+  "tag_browser_splitter_horizontal_state": [
+    true,
+    200
+  ]
+}
