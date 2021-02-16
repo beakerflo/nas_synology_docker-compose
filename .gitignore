@@ -13,6 +13,7 @@ MediaCover
 acme.json
 openvpn-credentials.txt
 transmission-credentials.txt
+repositories
 apps/torrentvpn/data
 torrents
 resume
@@ -35,3 +36,8 @@ rename.sh_*
 *.3
 *.4
 *.bak
+uploads
+avatars
+repo-avatars
+indexers
+queues

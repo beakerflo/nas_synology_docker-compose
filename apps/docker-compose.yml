@@ -1,15 +1,15 @@
 version: '3.9'
 
 networks:
-  01-frontend:
+  frontend:
     external:
-      name: "01-frontend"
-  02-backend:
+      name: frontend
+  backend:
     external:
-      name: "02-backend"
-  03-appnet:
+      name: backend
+  appnet:
     external:
-      name: "03-appnet"
+      name: appnet
       
 services:
 
@@ -31,7 +31,7 @@ services:
       - 8082:8080
       - 8083:8081
     networks:
-      - "03-appnet"
+      - appnet
 
   mariadb:
     image: ghcr.io/linuxserver/mariadb:latest
@@ -45,7 +45,7 @@ services:
     volumes:
       - ./mariadb:/config
     networks:
-      - "02-backend"
+      - backend
 
   portainer:
     image: portainer/portainer-ce:alpine
@@ -59,7 +59,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./portainer:/data
     networks:
-      - "03-appnet"
+      - appnet
  
   redis:
     image: redis:latest
@@ -71,7 +71,7 @@ services:
     volumes:
       - ./redis:/data
     networks:
-      - "01-frontend"
+      - backend
 
   torrentvpn:
     image: haugene/transmission-openvpn:latest
@@ -108,4 +108,4 @@ services:
       - 8888:8888
       - 9091:9091
     networks:
-      - "03-appnet"
+      - appnet
