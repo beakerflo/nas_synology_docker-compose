@@ -13,6 +13,7 @@ MediaCover
 acme.json
 openvpn-credentials.txt
 transmission-credentials.txt
+repositories
 apps/torrentvpn/data
 torrents
 resume
@@ -22,9 +23,6 @@ credentials.conf
 servers/authelia/users_database.yml
 cache
 db
-gitlab/data/*
-gitlab/logs/reconfigure
-gitlab/logs/sshd
 Backups
 incomplete
 @eaDir
@@ -35,3 +33,10 @@ rename.sh_*
 *.3
 *.4
 *.bak
+uploads
+avatars
+repo-avatars
+indexers
+queues
+attachments
+sessions
