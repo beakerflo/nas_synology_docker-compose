@@ -23,9 +23,6 @@ credentials.conf
 servers/authelia/users_database.yml
 cache
 db
-gitlab/data/*
-gitlab/logs/reconfigure
-gitlab/logs/sshd
 Backups
 incomplete
 @eaDir

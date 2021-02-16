@@ -24,6 +24,7 @@ services:
       - ./authelia:/config
     networks:
       - frontend
+      - backend
     labels:
       - traefik.enable=true
       - traefik.http.services.authelia.loadbalancer.server.port=9091
@@ -35,6 +36,7 @@ services:
       - traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://$URL_AUTHELIA/
       - traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true
       - traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email
+      - traefik.docker.network=frontend
 
   bazarr:
     image: ghcr.io/linuxserver/bazarr:latest
@@ -98,7 +100,6 @@ services:
       - traefik.http.routers.calibreweb-rtrs.tls.certresolver=myresolver
       - traefik.http.routers.calibreweb-rtrs.service=calibreweb
       - traefik.http.routers.calibreweb-rtrs.rule=HostHeader(`$URL_CALIBREWEB`)
-      - traefik.docker.network=frontend
 
   git:
     image: gitea/gitea:latest
@@ -167,7 +168,6 @@ services:
       - traefik.http.routers.lidarr-rtrs.tls.domains[0].main=$URL_LIDARR
       - traefik.http.routers.lidarr-rtrs.entrypoints=websecure
       - traefik.http.routers.lidarr-rtrs.rule=HostHeader(`$URL_LIDARR`)
-      - traefik.docker.network=frontend
 
   phpmyadmin:
     container_name: phpmyadmin
@@ -229,7 +229,6 @@ services:
       - traefik.http.routers.radarr-rtrs.tls.domains[0].main=$URL_RADARR
       - traefik.http.routers.radarr-rtrs.entrypoints=websecure
       - traefik.http.routers.radarr-rtrs.rule=HostHeader(`$URL_RADARR`)
-      - traefik.docker.network=frontend
 
   sabnzbd:
     image: ghcr.io/linuxserver/sabnzbd:latest
@@ -262,7 +261,6 @@ services:
       - traefik.http.routers.sabnzbd-rtrs.tls.domains[0].main=$URL_SABNZBD
       - traefik.http.routers.sabnzbd-rtrs.entrypoints=websecure
       - traefik.http.routers.sabnzbd-rtrs.rule=HostHeader(`$URL_SABNZBD`)
-      - traefik.docker.network=frontend
 
   sonarr:
     image: ghcr.io/linuxserver/sonarr:latest
@@ -295,7 +293,6 @@ services:
       - traefik.http.routers.sonarr-rtrs.tls.domains[0].main=$URL_SONARR
       - traefik.http.routers.sonarr-rtrs.entrypoints=websecure
       - traefik.http.routers.sonarr-rtrs.rule=HostHeader(`$URL_SONARR`)
-      - traefik.docker.network=frontend
 
   web:
     image: nginx:latest
@@ -321,7 +318,6 @@ services:
       - traefik.http.routers.web-rtrs.tls.certresolver=myresolver
       - traefik.http.routers.web-rtrs.entrypoints=websecure
       - traefik.http.routers.web-rtrs.rule=HostHeader(`$URL_WEB0`) || HostHeader(`$URL_WEB1`)
-      - traefik.docker.network=frontend
 
   stolpweb:
     image: nginx:latest
@@ -347,7 +343,6 @@ services:
       - traefik.http.routers.stolpweb-rtrs.tls.certresolver=myresolver
       - traefik.http.routers.stolpweb-rtrs.entrypoints=websecure
       - traefik.http.routers.stolpweb-rtrs.rule=HostHeader(`$URL_STOLPWEB`)
-      - traefik.docker.network=frontend
 
   traefik:
     image: traefik
@@ -395,4 +390,3 @@ services:
       - traefik.http.routers.traefik-rtrs.tls=true
       - traefik.http.routers.traefik-rtrs.tls.domains[0].main=$URL_TRAEFIK
       - traefik.http.routers.traefik-rtrs.tls.certresolver=myresolver
-      - traefik.docker.network=frontend
