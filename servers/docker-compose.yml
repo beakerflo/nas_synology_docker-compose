@@ -362,7 +362,7 @@ services:
       - --accesslog=true
       - --accesslog.filepath=/data/access.log
       - --certificatesResolvers.myresolver.acme.httpChallenge=true
-#      - --certificatesResolvers.myresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
+      #- --certificatesResolvers.myresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
       - --certificatesResolvers.myresolver.acme.httpChallenge.entryPoint=web
       - --certificatesResolvers.myresolver.acme.email=floris@vanenter.nl
       - --certificatesResolvers.myresolver.acme.storage=/letsencrypt/acme.json
