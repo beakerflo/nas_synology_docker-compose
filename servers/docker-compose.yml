@@ -136,6 +136,12 @@ services:
       - traefik.http.routers.git-rtrs.rule=HostHeader(`$URL_GIT`)
       - traefik.http.services.git.loadbalancer.server.port=3000
       - traefik.docker.network=frontend
+      - traefik.tcp.routers.git-ssh.entrypoints=ssh
+      - traefik.tcp.routers.git-ssh.tls=true
+      - traefik.tcp.routers.git-ssh.tls.certresolver=myresolver
+      - traefik.tcp.routers.git-ssh.tls.domains[0].main=$URL_GIT
+      - traefik.tcp.routers.git-ssh.rule=HostSNI(`$URL_GIT`)
+      - traefik.tcp.services.git-ssh.loadbalancer.server.port=22
 
   lidarr:
     image: ghcr.io/linuxserver/lidarr:latest
@@ -350,6 +356,7 @@ services:
     restart: always
     ports:
       - 80:80
+      - 202:22
       - 443:443
       - 8080:8080
     command: 

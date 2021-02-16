@@ -30,6 +30,8 @@ access_control:
       policy: bypass
     - domain: bazarr.liefdelaan.nl
       policy: one_factor
+    - domain: git.liefdelaan.nl
+      policy: bypass
     - domain: hassio.liefdelaan.nl
       policy: bypass
     - domain: lidarr.liefdelaan.nl
