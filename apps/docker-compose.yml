@@ -71,7 +71,7 @@ services:
     volumes:
       - ./redis:/data
     networks:
-      - backend
+      - frontend
 
   torrentvpn:
     image: haugene/transmission-openvpn:latest

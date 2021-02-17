@@ -24,7 +24,6 @@ services:
       - ./authelia:/config
     networks:
       - frontend
-      - backend
     labels:
       - traefik.enable=true
       - traefik.http.services.authelia.loadbalancer.server.port=9091

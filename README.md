@@ -28,7 +28,7 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#traefik">Traefik</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -68,6 +68,8 @@ Install docker via the GUI.
 3. Search docker and install the package
 4. You can copy this repo anywhere on the nas
 
+_For more information, please refer to the [Synology Docker Installation Docs](https://www.synology.com/en-us/dsm/feature/docker)_
+
 #### docker-compose
 1. Move old docker-compose version to back-up file.
    ```sh
@@ -79,25 +81,28 @@ Install docker via the GUI.
    ```sh
    curl -L https://github.com/docker/compose/releases/download/X.XX.X/docker-compose-`uname -s`-`uname -m` -o docker-compose
    ```
-Be sure to replace the X.XX.X with the latest docker compose release number from here (1.26.2 at this time).
+Be sure to replace the X.XX.X with the [latest docker compose release number from here](https://github.com/docker/compose/releases) (1.28.2 at this time).
 
 3. Make sure docker-compose is executable
 ```sh
 chmod +x docker-compose
 ```
+_For more information, please refer to the [Docker-Compose Installation Docs](https://docs.docker.com/compose/install/)_
 
 ### Installation
 
+All the commando's are ran as if you start from the root of the project.
+
 1. Clone the repo
    ```sh
-   git clone https://github.com/your_username_/Project-Name.git
+   git clone https://git.vanenter.nl/bkrflo/NAS_docker-compose.git
    ```
 2. Create missing folders for all the docker services in the docker-compose files.
     a. apps/*
     b. servers/*
 3. Make sure the let's encrypt request is in staging mode, check servers/docker-compose.yml, search for:
     ```sh
-      - --certificatesResolvers.myresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
+      - --certificatesResolvers.myresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory 
     ```
 4. Copy archive/apps.example.env to apps/.env and fill in the necessary values
 5. Copy archive/servers.example.env to servers/.env and fill in the necessary values
@@ -135,9 +140,9 @@ chmod +x docker-compose
    ```
 9. Test if all the front facing docker containers have the correct fake certificates.
 10. If succesfull remove the acme.json file in the letsencrypt folder
-   ```sh
-   rm ./servers/traefik/letsencrypt/acme.json
-   ```
+    ```sh
+    rm ./servers/traefik/letsencrypt/acme.json
+    ```
 11. comment the line with:
     ```sh
       - --certificatesResolvers.myresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
@@ -149,30 +154,75 @@ chmod +x docker-compose
     docker-compose up -d
     ```
 13. After creation of Troefik reboot traefik container for the last time.
-   ```sh
-   docker restart traefik
-   ```
+    ```sh
+    docker restart traefik
+    ```
 14. Back acme.json file with all the current certificates.
-   ```sh
-   cp ./servers/traefik/letsencrypt/acme.json ./servers/traefik/letsencrypt/acme.backup.json
-   ```
+    ```sh
+    cp ./servers/traefik/letsencrypt/acme.json ./servers/traefik/letsencrypt/acme.backup.json
+    ```
 
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+#### Changes
+If you change anything in the docker-compose file you can apply the changes by running the docker-compose command again.
+```sh
+cd ./servers
+docker-compose up -d
+cd ../apps
+docker-compose up -d
+```
+#### Updates
+To update the containers I am not running an extra service. Every week I run the following command to pull the latest image:
+```sh
+cd ./servers
+docker-compose pull
+cd ../apps
+docker-compose pull
+```
+And I apply the new image by re-running docker-compose.
+```sh
+cd ./servers
+docker-compose up -d
+cd ../apps
+docker-compose up -d
+```
+Rollback is easy because the old image remain in docker. If you want to cleanup these unused images you can run:
+```sh
+docker image prune --all
+```
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+_For more examples and ideas, please refer to the [Docker Documentation](https://docs.docker.com)_
 
 
 
-<!-- ROADMAP -->
-## Roadmap
+<!-- TRAEFIK -->
+## Traefik
 
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a list of proposed features (and known issues).
+In our project we use Traefik as a reverse proxy. You can also use the built-in reverse proxy of Synology but the containerized Traefik provides some extra futures. It is portable like docker intended and you can use docker to have some settings applied by docker itself.
 
+### Overview
+I forward the ports 80, 443, 22 from my external ip-address to the synology NAS on the router. And these ports are received by Traefik. Depending on the domain name the traffic is routed to specific containers. 
 
+To prevent unauthorized access some routes are blocked (see red block in image) by Authelia. All these routes are first routed to authelia to authenicate the user. If the user is authenticated, the traffic is rerouted to the container. If there is no valid authentication the traffic stops at authelia.
 
+Traefik can be configured by using Docker or via files. I have used both. The NAS DSM and Home Assistant (HA) is not in docker, so it is routed by file-configuration.
+
+<img src="https://entermi.nl/wp-content/uploads/2021/02/IMG_0084.jpg">
+
+_For an explanation of the Traefik architecture, please read this [Traefik Concepts](https://doc.traefik.io/traefik/getting-started/concepts/)_
+
+### Docker configuration
+You can configure Traefik and it's rules via labels on the docker container in the docker-compose file. Here you configure each container as a 'client' of the Traefik container. The Traefik container can be a 'client' of itself.
+#### Traefik container
+With the labels you configure the other containers. Some main settings need to be entered directly in Traefik via commands. Like which entrypoints does Traefik need to listen to. These are defined for html as follows:
+--entrypoint.[NAME ENTRYPOINT].address=[IP (optional)]:[PORT]
+So you can find it in [servers/docker-compose](/NAS_docker-compose/src/branch/master/servers/docker-compose.yml)
+```sh
+- --entryPoints.web.address=:80
+- --entryPoints.websecure.address=:443
+```
 <!-- CONTRIBUTING -->
 ## Contributing
 
@@ -183,8 +233,6 @@ Contributions are what make the open source community such an amazing place to b
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
-
 
 <!-- LICENSE -->
 ## License
