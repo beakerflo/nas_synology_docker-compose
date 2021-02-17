@@ -214,15 +214,108 @@ Traefik can be configured by using Docker or via files. I have used both. The NA
 _For an explanation of the Traefik architecture, please read this [Traefik Concepts](https://doc.traefik.io/traefik/getting-started/concepts/)_
 
 ### Docker configuration
-You can configure Traefik and it's rules via labels on the docker container in the docker-compose file. Here you configure each container as a 'client' of the Traefik container. The Traefik container can be a 'client' of itself.
+You can configure Traefik and it's rules via labels on the docker container in the docker-compose file. Here you configure each container as a 'client' of the Traefik container. The Traefik container can be a 'client' of itself. The settings below are already set in the docker-compose files. For better understanding I will highlight a few.
 #### Traefik container
 With the labels you configure the other containers. Some main settings need to be entered directly in Traefik via commands. Like which entrypoints does Traefik need to listen to. These are defined for html as follows:
 --entrypoint.[NAME ENTRYPOINT].address=[IP (optional)]:[PORT]
-So you can find it in [servers/docker-compose](/NAS_docker-compose/src/branch/master/servers/docker-compose.yml)
+So you can find it in [servers/docker-compose](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/servers/docker-compose.yml)
+
 ```sh
-- --entryPoints.web.address=:80
-- --entryPoints.websecure.address=:443
+    - --entryPoints.web.address=:80
+    - --entryPoints.websecure.address=:443
 ```
+_For more information about entrypoints, please read this [Traefik Entrypoints]https://doc.traefik.io/traefik/routing/entrypoints/)_
+
+Another important setting is allowing docker & file configuration.
+```sh
+    - --providers.docker=true
+    - --providers.file.directory=/rules
+```
+This enables the providers docker & file and defines where the files can be found.
+
+_For more information about providers, please read this [Traefik Providers Docker](https://doc.traefik.io/traefik/routing/providers/docker/)_
+
+#### All 'client' containers
+Configure a router for the container, define which entrypoint is needed:
+traefik.http.routers.[ROUTER_NAME].entrypoints=[ENTRYPOINT_NAME]
+
+So you can find it in [servers/docker-compose](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/servers/docker-compose.yml)
+```sh
+    - traefik.http.routers.sonarr-rtr.entrypoints=web
+```
+
+Specify a domain to listen to filter the traffic on:
+traefik.http.routers.[ROUTER_NAME].rule=HostHeader(`[EXTERNAL_DOMAIN_OF_APP]`)
+
+So you can find it in [servers/docker-compose](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/servers/docker-compose.yml)
+```sh
+    - traefik.http.routers.sonarr-rtrs.rule=HostHeader(`$URL_SONARR`)
+```
+
+Define the service name, which is the docker service name if you use the docker provider.
+traefik.http.routers.[ROUTER_NAME].service=[DOCKER_SERVICE_NAME]
+
+So you can find it in [servers/docker-compose](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/servers/docker-compose.yml)
+```sh
+    - traefik.http.routers.stolpweb-rtrs.service=stolpweb
+```
+
+### Let's Encrypt & SSL
+All websites need to be secured by an certificate. if you do not the browsers will issue a security warning. Traefik is able to communicate with let's encrypt. This way it requests and renews certificates for your services. To enable this you need to do a few things.
+
+#### As a Traefik command
+1. Define a certificate resolver and method. Here we use a http challenger.
+    --certificatesResolvers.[RESOLVER_NAME].acme.httpChallenge=true
+
+    So you can find it in [servers/docker-compose](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/servers/docker-compose.yml)
+
+    ```sh
+        - --certificatesResolvers.myresolver.acme.httpChallenge=true
+    ```
+
+2. Make sure we use a staging server of Let's Encrypt to perform all the requests as a test.
+
+    So you can find it in [servers/docker-compose](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/servers/docker-compose.yml)
+    ```sh
+        - --certificatesResolvers.myresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
+    ```
+
+3. Specify which entrypoint needs to be used for the http challenge. We use the entrypoints, port 80, named web.
+    --certificatesResolvers.[RESOLVER_NAME].acme.httpChallenge.entryPoint=web
+
+    So you can find it in [servers/docker-compose](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/servers/docker-compose.yml)
+    ```sh
+        - --certificatesResolvers.myresolver.acme.httpChallenge.entryPoint=[ENTRYPOINT_NAME]
+    ```
+
+4. Specify e-mail address. Not obligatory, but it is nice to provide to a free service. It can contact you and sends a heads-up when your certificates are close to expiring.
+    --certificatesResolvers.myresolver.acme.email=[EMAIL_ADDRESS]
+
+    So you can find it in [servers/docker-compose](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/servers/docker-compose.yml)
+    ```sh
+        - --certificatesResolvers.[RESOLVER_NAME].acme.email=floris@vanenter.nl
+    ```
+
+5. The certificates needs to be saved somewhere. We choose to save it in a json file. This file will be used every time you spin up a container.
+
+    So you can find it in [servers/docker-compose](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/servers/docker-compose.yml)
+    ```sh
+        - --certificatesResolvers.myresolver.acme.storage=/letsencrypt/acme.json
+    ```
+
+#### As a Docker label on a container
+1. Define the domain where the certificate needs to be requested for. It can retrieve it from the router-rules, but I want to be sure it is correct. Since I use a variable, it is not double administration.
+    * traefik.http.routers.[ROUTER_NAME].tls.domains[0].main=[EXTERNAL_DOMAIN_OF_APP]
+    * traefik.http.routers.[ROUTER_NAME].tls=true
+    * traefik.http.routers.[ROUTER_NAME].tls.certresolver=[RESOLVER_NAME]
+
+    So you can find it in [servers/docker-compose](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/servers/docker-compose.yml)
+    ```sh
+        - traefik.http.routers.stolpweb-rtrs.tls.domains[0].main=$URL_STOLPWEB
+        - traefik.http.routers.stolpweb-rtrs.tls=true
+        - traefik.http.routers.stolpweb-rtrs.tls.certresolver=myresolver
+    ```
+
 <!-- CONTRIBUTING -->
 ## Contributing
 
@@ -237,48 +330,20 @@ Contributions are what make the open source community such an amazing place to b
 <!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the Creative Commons License. See `LICENSE` for more information.
 
 
 
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
+Floris van Enter - [EnterMI](https://entermi.nl) - floris@entermi.nl
 
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
+Project Link: [https://github.com/beakerflo/nas_synology_docker-compose](https://github.com/beakerflo/nas_synology_docker-compose)
 
 
 
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
-* [Readme page](https://github.com/othneildrew/Best-README-Template)
-* [Choose an Open Source License](https://choosealicense.com)
-* [GitHub Pages](https://pages.github.com)
-* [Animate.css](https://daneden.github.io/animate.css)
-* [Loaders.css](https://connoratherton.com/loaders)
-* [Slick Carousel](https://kenwheeler.github.io/slick)
-* [Smooth Scroll](https://github.com/cferdinandi/smooth-scroll)
-* [Sticky Kit](http://leafo.net/sticky-kit)
-* [JVectorMap](http://jvectormap.com)
-* [Font Awesome](https://fontawesome.com)
-
-
-
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=for-the-badge
-[contributors-url]: https://github.com/othneildrew/Best-README-Template/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=for-the-badge
-[forks-url]: https://github.com/othneildrew/Best-README-Template/network/members
-[stars-shield]: https://img.shields.io/github/stars/othneildrew/Best-README-Template.svg?style=for-the-badge
-[stars-url]: https://github.com/othneildrew/Best-README-Template/stargazers
-[issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=for-the-badge
-[issues-url]: https://github.com/othneildrew/Best-README-Template/issues
-[license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
-[license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/othneildrew
-[product-screenshot]: images/screenshot.png
+* [Readme page](https://github.com/beakerflo/nas_synology_docker-compose/blob/master/README.md)
+* [Synology Docker Media Server with Traefik, Docker Compose, and Cloudflare](https://www.smarthomebeginner.com/synology-docker-media-server/)
