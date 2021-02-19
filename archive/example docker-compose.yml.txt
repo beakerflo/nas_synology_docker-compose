@@ -1,0 +1,87 @@
+version: '3.3'
+
+services:
+
+  sonarr:
+    image: ghcr.io/linuxserver/sonarr
+    container_name: sonarr
+    restart: unless-stopped
+    environment:
+      - PUID=1026     # <-- Run as user with this ID
+      - PGID=100     # <-- Run as group with this ID
+      - TZ=Europe/Amsterdam
+      - UMASK_SET=022
+    volumes:
+      - ./sonarr:/config
+      - /volume2/tvshows:/tv
+      - /volume1/downloads/complete:/downloads
+    labels:
+      - traefik.enable=true     # <-- Zorg dat traefik bij de docker-container kan.
+      - traefik.http.routers.sonarr.entrypoints=web     # <-- Welke port op traefik wordt als ingang gebruikt? Hier web genoemd.
+      - traefik.http.routers.sonarr.service=sonarr     # <-- Definieer deze app als service op traefik
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989     # <-- Standaard wordt dezelfde poort (80) gebruikt, tenzij je hem vertaalt naar een ander.
+      - traefik.http.routers.sonarr.rule=Host(`stolp.vanenter.nl`) && PathPrefix(`/sonarr`)     # <-- Waar wordt naar gekeken om naar de Sonarr docker te re-routen? Moet 'stolp.vanenter.nl/sonarr' zijn.
+      - traefik.http.middlewares.gotowebsecure.redirectscheme.scheme=https     # <-- Maak een middleware (soort rekensom tussen traefik en docker), geef het de naam 'gotowebsecure' waarin al het http verkeerd vertaald wordt naar https.
+      - traefik.http.middlewares.gotowebsecure.redirectscheme.permanent=true     # <-- Breidt de middleware uit met: Laat de browser weten dat het een permanente en geen tijdelijke doorsturing is.
+      - traefik.http.routers.sonarr.middlewares=gotowebsecure     # <-- Pas de middleware toe op de Sonarr route.
+      - traefik.http.routers.sonarr-s.service=sonarr     # <-- Definieer deze route van de app en gebruik de bestaande service op traefik
+      - traefik.http.routers.sonarr-s.tls=true     # <-- Zet SSL in de vorm van TLS
+      - traefik.http.routers.sonarr-s.tls.certresolver=myresolver     # <-- Gebruik de certificaat ophaalmachine: myresolver (bepaald op traefik) om het juiste certificaat op te halen.
+      - traefik.http.routers.sonarr-s.entrypoints=websecure     # <-- Welke port op traefik wordt als ingang gebruikt voor het SSL verkeer? Hier websecure genoemd.
+      - traefik.http.services.sonarr-s.loadbalancer.server.port=9898     # <-- Standaard wordt dezelfde poort (443) gebruikt, tenzij je hem vertaalt naar een ander. 9898 is de SSL ingang van Sonarr.
+      - traefik.http.routers.sonarr-s.rule=Host(`stolp.vanenter.nl`) && PathPrefix(`/sonarr`)     # <-- Waar wordt naar gekeken om naar de Sonarr docker te re-routen? Moet 'stolp.vanenter.nl/sonarr' zijn. Omdat het een eigen route 'sonarr-s' moet je het opnieuw aangeven.
+
+  stolpweb:    # <-- Een webserver waarop ik straks dingetjes van de boerderij toon (bijvoorbeled via Heimdall/Organizer)
+    image: nginx    # <-- Nginx is de linux webserver, kleiner dan Apache2
+    container_name: stolpweb
+    restart: unless-stopped
+    volumes:
+      - ./web/stolp:/usr/share/nginx/html    # <-- Om de website files te kunnen beheren vanaf de NAS.
+    labels:
+      - traefik.enable=true    # <-- Standaard kan Traefik geen containers zien, tenzij dit aan staat.
+      - traefik.http.routers.stolpweb.entrypoints=web    # <-- zelfde als Sonarr, zie daar.
+      - traefik.http.routers.stolpweb.rule=HostHeader(`stolp.vanenter.nl`)     # <-- Waar wordt naar gekeken om naar de web docker te re-routen? Moet 'stolp.vanenter.nl' zijn.
+      - traefik.http.middlewares.gotowebsecure.redirectscheme.scheme=https    # <-- zelfde als Sonarr, zie daar.
+      - traefik.http.middlewares.gotowebsecure.redirectscheme.permanent=true    # <-- zelfde als Sonarr, zie daar.
+      - traefik.http.routers.stolpweb.middlewares=gotowebsecure    # <-- zelfde als Sonarr, zie daar.
+      - traefik.http.routers.stolpweb-s.tls.domains[0].main=stolp.vanenter.nl     # <-- Definieer het domein en sub-domein wat op het certificaat moet komen. Omdat dit de root is van de url is, wordt dat hier bepaald.
+      - traefik.http.routers.stolpweb-s.tls=true    # <-- zelfde als Sonarr, zie daar.
+      - traefik.http.routers.stolpweb-s.tls.certresolver=myresolver    # <-- zelfde als Sonarr, zie daar.
+      - traefik.http.routers.stolpweb-s.entrypoints=websecure    # <-- zelfde als Sonarr, zie daar.
+      - traefik.http.routers.stolpweb-s.rule=HostHeader(`stolp.vanenter.nl`)    # <-- Waar wordt naar gekeken om naar de web docker te re-routen? Moet 'stolp.vanenter.nl' zijn. Omdat het een eigen route 'stolpweb-s' moet je het opnieuw aangeven.
+
+
+  traefik:
+    image: traefik:v2.4    # <-- Latest werkt niet, je moet een versie meegeven, ook verstandig zodat je bewust bent van de configuratie wijzigingen bij versie.
+    container_name: traefik
+    ports:
+      - 80:80    # <-- Poort 80 komt binnen bij traefik om te vertalen voor web
+      - 443:443    # <-- Poort 443 komt binnen bij traefik om te vertalen voor websecure
+      - 8080:8080    # <-- Poort voor het dashboard, via labels kan het eventueel extern worden aangeboden.
+    command: 
+#      - --log.level=DEBUG    # <-- Als je tijdens het opbouwen van treafik de certificaten aanvraagt, maar ook de routes bepaald kan je met debug op het console (via bijvoorbeeld logs van portainer) de stappen zien.
+      - --api.insecure=true    # <-- Zo hoef je niet in te loggen op de api, goed voor test, slecht voor productie.
+      - --providers.docker=true     # <-- Zorg Dat traefik bij de docker-container kan.
+      - --providers.docker.exposedbydefault=false     # <-- Zorg dat traefik bij geen enkele container kan, tenzij je dat per container aan zet
+      - --entryPoints.web.address=:80    # <-- http-poort. Definieer binnenkomend punt en welke poort er bij hoort. Deze naam wordt op de andere containers gebruikt als ingang.
+      - --entryPoints.websecure.address=:443    # <-- https-poort. Definieer binnenkomend punt en welke poort er bij hoort. Deze naam wordt op de andere containers gebruikt als ingang.
+      - --accesslog=true    # <-- hou bij welke url's worden ge-reroute voor diagnose.
+      - --accesslog.filepath=/data/access.log    # <-- waar wordt het access-log weggeschreven?
+      - --certificatesResolvers.myresolver.acme.httpChallenge=true    # <-- laat let's encrypt je url checken via http-challenge. Traefik maakt automatisch een soort folder aan om dit af te werken. 
+#      - --certificatesResolvers.myresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory    # <-- Tijdens het maken en testen zet dit aan!!!! Let's encrypt levert dan fake certificaten zodat je kan checken of alles goed werkt. Pas als alles klaar is dan haal je het hekje weg zodat je een echt certificaat kan aanvragen.
+      - --certificatesResolvers.myresolver.acme.httpChallenge.entryPoint=web    # <-- Welke poort wordt voor de http-challenge gebruikt. Web, poort 80 natuurlijk.
+      - --certificatesResolvers.myresolver.acme.email=floris@vanenter.nl    # <-- Welk e-mail adres moet worden geregistreerd  bij het aanvragen? Aan te raden een echte te gebruiken.
+      - --certificatesResolvers.myresolver.acme.storage=/letsencrypt/acme.json    # <-- waar wordt informatie weggeschreven over/van het certificaat. Gooi dit bestand weg als je overstapt van faker naar echte certificaten om er voor te zorgen dat traefik een echte aanvraagt en niet denkt: Er staat er al 1.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock    # <-- Traefik moet docker kunnen uitlezen om er voor te zorgen dat alle instellingen goed worden bepaald.
+      - ./traefik/data:/data    # <-- Data files, zoals bijvoorbeeld acces.log.
+      - ./traefik/letsencrypt:/letsencrypt    # <-- waar wordt info over/van het certificaat weggeschreven?
+      - ./traefik/dynamic.yaml:/dynamic.yaml    # <-- Extra instellingen voor het routeren van treafik-meuk. Gebruik ik nog niet, maar mocht het zover komen, zijn.
+
+# BELANGRIJK!!!
+# - Als je traefik voor het eerst op start en tijdens het builden van de container de certificaten worden aangevraagd, fake of echt,
+#   dan moet je als traefik helemaal opgestart is, traefik nog een keer uit zetten en weer aan zetten. (gewoon herstarten) om er voor te zorgen dat de certificaten geactiveerd wordt.
+# - Dus:
+#   - stap 1; configuratie aanpassen en opslaan in docker-compose.yml
+#   - stap 2: docker-compose up -d uitvoeren zodat traefik opgebouwd wordt.
+#   - stap 3: als docker-compose klaar is en 3 minuten gewacht is, stop de docker, start de docker om de certificaten te koppelen.
