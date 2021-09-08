@@ -6,7 +6,7 @@ host: 0.0.0.0
 port: 9091
 log_level: debug
 # This secret can also be set using the env variables AUTHELIA_JWT_SECRET_FILE
-jwt_secret: GJpLr9zU2woE5cyEnFBIvaBxhilQHYUF0qF642h3rn1TM6RZd1se5e1cMZpjjZR
+jwt_secret: GJpLr9zU2woE5cyEoauaoeuoenFBIvaBxhilQHYUF0qF642h3rn1TM6RZd1se5e1cMZpjjZR
 default_redirection_url: https://stolp.liefdelaan.nl
 totp:
   issuer: authelia.com
@@ -58,7 +58,7 @@ access_control:
 session:
   name: authelia_session
   # This secret can also be set using the env variables AUTHELIA_SESSION_SECRET_FILE
-  secret: VP1gJCh59SDQQDfqf672dW0QQTjJwbRi6RlR3Z3RCd8X18DkKTp0RckNv3P9h4t
+  secret: VP1gJCh59SDQQDfqf672dW0QQTjJwbRi6RlR3Zoeuaoeuao3RCd8X18DkKTp0RckNv3P9h4t
   expiration: 7200 # 1 hour
   inactivity: 600 # 5 minutes
   domain: liefdelaan.nl # Should match whatever your root protected domain is
@@ -81,7 +81,7 @@ storage:
 notifier:
   smtp:
     username: liefdelaan@ziggo.nl
-    password: KORN@ciss3fism3crow
+    password: KgewijzigdwachtwoordK
     host: smtp.ziggo.nl
     port: 587 # Or 465
     sender: liefdelaan@ziggo.nl

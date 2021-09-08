@@ -1,0 +1,57 @@
+http:
+
+  routers:
+
+    nas-rtr:
+      entryPoints:
+        - web
+      service: nas
+      middlewares:
+        - redirect-to-https@docker
+      rule: HostHeader(`nas.liefdelaan.nl`)
+      
+    nas-rtrs:
+      entryPoints:
+        - websecure
+      service: nas
+      middlewares:
+        - authelia@docker
+      rule: HostHeader(`nas.liefdelaan.nl`)
+      tls:
+        certResolver: myresolver
+        domains:
+          - main: nas.liefdelaan.nl
+
+    hassio-rtr:
+      entryPoints:
+        - web
+      service: hassio
+      middlewares:
+        - redirect-to-https@docker
+      rule: HostHeader(`hassio.liefdelaan.nl`)
+      
+    hassio-rtrs:
+      entryPoints:
+        - websecure
+      service: hassio
+      middlewares:
+        - authelia@docker
+      rule: HostHeader(`hassio.liefdelaan.nl`)
+      tls:
+        certResolver: myresolver
+        domains:
+          - main: hassio.liefdelaan.nl
+
+  services:
+
+    nas:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: 'http://10.16.8.240:5000'
+
+    hassio:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: 'http://10.16.8.10:8123'

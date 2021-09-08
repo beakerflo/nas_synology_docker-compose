@@ -4,9 +4,6 @@ networks:
   frontend:
     external:
       name: frontend
-  backend:
-    external:
-      name: backend
   appnet:
     external:
       name: appnet
@@ -33,20 +30,6 @@ services:
     networks:
       - appnet
 
-  mariadb:
-    image: ghcr.io/linuxserver/mariadb:latest
-    container_name: mariadb
-    restart: unless-stopped
-    environment:
-      - PUID=$PUID
-      - PGID=$PGID
-      - MYSQL_ROOT_PASSWORD=$MYSQL_PWD
-      - TZ=$TZ
-    volumes:
-      - ./mariadb:/config
-    networks:
-      - backend
-
   portainer:
     image: portainer/portainer-ce:alpine
     container_name: portainer
@@ -72,54 +55,3 @@ services:
       - ./redis:/data
     networks:
       - frontend
-
-  syncthing:
-    image: 'syncthing/syncthing:latest'
-    container_name: syncthing
-    environment:
-      - PUID=$PUID
-      - PGID=$PGID
-      - TZ=$TZ
-    ports:
-      - 22000:22000
-    volumes:
-        - ./syncthing/:/var/syncthing
-    networks:
-      - appnet
-
-  torrentvpn:
-    image: haugene/transmission-openvpn:latest
-    container_name: torrentvpn
-    restart: unless-stopped
-    privileged: true
-    volumes:
-      - ./torrentvpn/data:/data
-      - ./torrentvpn/config:/config
-      - ./torrentvpn/home:/transmission_home
-      - /volume1/downloads/complete:/downloads
-      - /volume1/downloads/incomplete:/incomplete
-      - /volume1/downloads/torrent_watch:/watch
-      - ./torrentvpn/config/resolv.conf:/etc/resolv.conf
-    environment:
-      - PUID=$PUID
-      - PGID=$PGID
-      - TZ=$TZ
-      - UMASK=022
-      - LOCAL_NETWORK=$APPNET
-      - OPENVPN_PROVIDER=$OPENVPN_PROVIDER
-      - OPENVPN_USERNAME=$OPENVPN_USERNAME
-      - OPENVPN_PASSWORD=$OPENVPN_PASSWORD
-      - TRANSMISSION_WATCH_DIR=/watch
-      - TRANSMISSION_DOWNLOAD_DIR=/downloads
-      - TRANSMISSION_INCOMPLETE_DIR=/incomplete
-      - TRANSMISSION_HOME=/transmission_home
-      - TRANSMISSION_RPC_PASSWORD=stolp_tosee
-      - TRANSMISSION_RPC_USERNAME=boerderij
-      - TRANSMISSION_UMASK=002
-      - TRANSMISSION_RATIO_LIMIT=1
-      - TRANSMISSION_RATIO_LIMIT_ENABLED=true
-    ports:
-      - 8888:8888
-      - 9091:9091
-    networks:
-      - appnet

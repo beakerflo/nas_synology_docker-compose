@@ -60,7 +60,7 @@ services:
       - traefik.http.routers.bazarr-rtr.service=bazarr
       - traefik.http.services.bazarr.loadbalancer.server.port=6767
       - traefik.http.routers.bazarr-rtr.rule=HostHeader(`$URL_BAZARR`)
-      - traefik.http.routers.bazarr-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.bazarr-rtr.middlewares=redirect-to-https
       - traefik.http.routers.bazarr-rtrs.middlewares=authelia@docker
       - traefik.http.routers.bazarr-rtrs.service=bazarr
       - traefik.http.routers.bazarr-rtrs.tls=true
@@ -92,7 +92,7 @@ services:
       - traefik.http.routers.calibreweb-rtr.service=calibreweb
       - traefik.http.services.calibreweb.loadbalancer.server.port=8083
       - traefik.http.routers.calibreweb-rtr.rule=HostHeader(`$URL_CALIBREWEB`)
-      - traefik.http.routers.calibreweb-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.calibreweb-rtr.middlewares=redirect-to-https
       - traefik.http.routers.calibreweb-rtrs.entrypoints=websecure
       - traefik.http.routers.calibreweb-rtrs.tls.domains[0].main=$URL_CALIBREWEB
       - traefik.http.routers.calibreweb-rtrs.tls=true
@@ -115,6 +115,8 @@ services:
       - DOMAIN=git.vanenter.nl
       - SSH_DOMAIN=git.vanenter.nl
     restart: unless-stopped
+    depends_on:
+      - traefik
     networks:
       - frontend
       - backend
@@ -123,10 +125,11 @@ services:
       - /etc/localtime:/etc/localtime:ro
     labels:
       - traefik.enable=true
+      - traefik.docker.network=frontend
       - traefik.http.routers.git-rtr.entrypoints=web
       - traefik.http.routers.git-rtr.service=git
       - traefik.http.routers.git-rtr.rule=HostHeader(`$URL_GIT`)
-      - traefik.http.routers.git-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.git-rtr.middlewares=redirect-to-https
       - traefik.http.routers.git-rtrs.entrypoints=websecure
       - traefik.http.routers.git-rtrs.service=git
       - traefik.http.routers.git-rtrs.tls=true
@@ -134,7 +137,6 @@ services:
       - traefik.http.routers.git-rtrs.tls.domains[0].main=$URL_GIT
       - traefik.http.routers.git-rtrs.rule=HostHeader(`$URL_GIT`)
       - traefik.http.services.git.loadbalancer.server.port=3000
-      - traefik.docker.network=frontend
       - traefik.tcp.routers.git-ssh.entrypoints=ssh
       - traefik.tcp.routers.git-ssh.tls=true
       - traefik.tcp.routers.git-ssh.tls.certresolver=myresolver
@@ -165,7 +167,7 @@ services:
       - traefik.http.routers.lidarr-rtr.service=lidarr
       - traefik.http.services.lidarr.loadbalancer.server.port=8686
       - traefik.http.routers.lidarr-rtr.rule=HostHeader(`$URL_LIDARR`)
-      - traefik.http.routers.lidarr-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.lidarr-rtr.middlewares=redirect-to-https
       - traefik.http.routers.lidarr-rtrs.middlewares=authelia@docker
       - traefik.http.routers.lidarr-rtrs.service=lidarr
       - traefik.http.routers.lidarr-rtrs.tls=true
@@ -173,6 +175,29 @@ services:
       - traefik.http.routers.lidarr-rtrs.tls.domains[0].main=$URL_LIDARR
       - traefik.http.routers.lidarr-rtrs.entrypoints=websecure
       - traefik.http.routers.lidarr-rtrs.rule=HostHeader(`$URL_LIDARR`)
+
+  mariadb:
+    image: ghcr.io/linuxserver/mariadb:latest
+    container_name: mariadb
+    restart: unless-stopped
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - MYSQL_ROOT_PASSWORD=$MYSQL_PWD
+      - TZ=$TZ
+    volumes:
+      - ./mariadb:/config
+    networks:
+      - frontend
+      - backend
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=frontend
+      - traefik.tcp.routers.mariadb-rtr.rule=HostSNI(`*`)
+      - traefik.tcp.routers.mariadb-rtr.entrypoints=mysql
+      - traefik.tcp.routers.mariadb-rtr.service=mariadb
+      - traefik.tcp.routers.mariadb-rtr.tls=false
+      - traefik.tcp.services.mariadb.loadbalancer.server.port=3306
 
   phpmyadmin:
     container_name: phpmyadmin
@@ -193,7 +218,7 @@ services:
       - traefik.http.routers.phpmyadmin-rtr.service=phpmyadmin
       - traefik.http.services.phpmyadmin.loadbalancer.server.port=80
       - traefik.http.routers.phpmyadmin-rtr.rule=HostHeader(`$URL_PHPMYADMIN`)
-      - traefik.http.routers.phpmyadmin-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.phpmyadmin-rtr.middlewares=redirect-to-https
       - traefik.http.routers.phpmyadmin-rtrs.middlewares=authelia@docker
       - traefik.http.routers.phpmyadmin-rtrs.service=phpmyadmin
       - traefik.http.routers.phpmyadmin-rtrs.tls=true
@@ -226,7 +251,7 @@ services:
       - traefik.http.routers.radarr-rtr.service=radarr
       - traefik.http.services.radarr.loadbalancer.server.port=7878
       - traefik.http.routers.radarr-rtr.rule=HostHeader(`$URL_RADARR`)
-      - traefik.http.routers.radarr-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.radarr-rtr.middlewares=redirect-to-https
       - traefik.http.routers.radarr-rtrs.middlewares=authelia@docker
       - traefik.http.routers.radarr-rtrs.service=radarr
       - traefik.http.routers.radarr-rtrs.tls=true
@@ -258,7 +283,7 @@ services:
       - traefik.http.routers.sabnzbd-rtr.service=sabnzbd
       - traefik.http.services.sabnzbd.loadbalancer.server.port=8080
       - traefik.http.routers.sabnzbd-rtr.rule=HostHeader(`$URL_SABNZBD`)
-      - traefik.http.routers.sabnzbd-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.sabnzbd-rtr.middlewares=redirect-to-https
       - traefik.http.routers.sabnzbd-rtrs.middlewares=authelia@docker
       - traefik.http.routers.sabnzbd-rtrs.service=sabnzbd
       - traefik.http.routers.sabnzbd-rtrs.tls=true
@@ -286,93 +311,124 @@ services:
       - frontend
     labels:
       - traefik.enable=true
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989
       - traefik.http.routers.sonarr-rtr.entrypoints=web
       - traefik.http.routers.sonarr-rtr.service=sonarr
-      - traefik.http.services.sonarr.loadbalancer.server.port=8989
       - traefik.http.routers.sonarr-rtr.rule=HostHeader(`$URL_SONARR`)
-      - traefik.http.routers.sonarr-rtr.middlewares=redirectToHttps@file
-      - traefik.http.routers.sonarr-rtrs.middlewares=authelia@docker
-      - traefik.http.routers.sonarr-rtrs.service=sonarr
-      - traefik.http.routers.sonarr-rtrs.tls=true
-      - traefik.http.routers.sonarr-rtrs.tls.certresolver=myresolver
-      - traefik.http.routers.sonarr-rtrs.tls.domains[0].main=$URL_SONARR
+      - traefik.http.routers.sonarr-rtr.middlewares=redirect-to-https
       - traefik.http.routers.sonarr-rtrs.entrypoints=websecure
       - traefik.http.routers.sonarr-rtrs.rule=HostHeader(`$URL_SONARR`)
+      - traefik.http.routers.sonarr-rtrs.service=sonarr
+      - traefik.http.routers.sonarr-rtrs.tls=true
+      - traefik.http.routers.sonarr-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.sonarr-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.sonarr-rtrs.tls.domains[0].main=$URL_SONARR
 
-  web:
-    image: nginx:latest
-    container_name: web
+  syncthing:
+    image: ghcr.io/linuxserver/syncthing
+    container_name: syncthing
     restart: unless-stopped
     depends_on:
       - traefik
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
     volumes:
-      - ./web:/usr/share/nginx/html
+      - ./syncthing/config:/config
+      - /volume1/homes/Floris/Macbook/:/bkrMac
+      - /volume1/homes/Floris/Cloud:/bkrMac/Cloud
+      - /volume1/homes/Petra/:/ptrMac
+      - /volume1/ebooks/:/common/ebooks
     networks:
       - frontend
     labels:
       - traefik.enable=true
-      - traefik.http.routers.web-rtr.entrypoints=web
-      - traefik.http.routers.web-rtr.service=web
-      - traefik.http.services.web.loadbalancer.server.port=80
-      - traefik.http.routers.web-rtr.rule=HostHeader(`$URL_WEB0`) || HostHeader(`$URL_WEB1`)
-      - traefik.http.routers.web-rtr.middlewares=redirectToHttps@file
-      - traefik.http.routers.web-rtrs.tls.domains[0].main=$URL_WEB0
-      - traefik.http.routers.web-rtrs.tls.domains[1].main=$URL_WEB1
-      - traefik.http.routers.web-rtrs.tls=true
-      - traefik.http.routers.web-rtrs.service=web
-      - traefik.http.routers.web-rtrs.tls.certresolver=myresolver
-      - traefik.http.routers.web-rtrs.entrypoints=websecure
-      - traefik.http.routers.web-rtrs.rule=HostHeader(`$URL_WEB0`) || HostHeader(`$URL_WEB1`)
+      - traefik.http.routers.syncthing-rtr.entrypoints=web
+      - traefik.http.routers.syncthing-rtr.service=syncthing
+      - traefik.http.services.syncthing.loadbalancer.server.port=8384
+      - traefik.http.routers.syncthing-rtr.rule=HostHeader(`$URL_SYNCTHING`)
+      - traefik.http.routers.syncthing-rtr.middlewares=redirect-to-https
+      - traefik.http.routers.syncthing-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.syncthing-rtrs.tls.domains[0].main=$URL_SYNCTHING
+      - traefik.http.routers.syncthing-rtrs.tls=true
+      - traefik.http.routers.syncthing-rtrs.service=syncthing
+      - traefik.http.routers.syncthing-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.syncthing-rtrs.entrypoints=websecure
+      - traefik.http.routers.syncthing-rtrs.rule=HostHeader(`$URL_SYNCTHING`)
 
-  stolpweb:
-    image: nginx:latest
-    container_name: stolpweb
-    restart: unless-stopped
-    depends_on:
-      - traefik
+  torrent:
+    image: haugene/transmission-openvpn
+    container_name: torrent
     volumes:
-      - ./stolpweb:/usr/share/nginx/html
+      - /volume1/downloads/complete:/data/completed
+      - /volume1/downloads/incomplete:/data/incomplete
+      - /volume1/downloads/torrent_watch:/data/watch
+      - ./torrent/config:/config
+      - ./torrent/data:/data
+      - ./torrent/media:/media/share/Torrents
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - frontend
+    environment:
+      - CREATE_TUN_DEVICE=true
+      - OPENVPN_PROVIDER=NORDVPN
+      - OPENVPN_USERNAME=floris@entermi.nl
+      - OPENVPN_PASSWORD=ment.maub3SECH4spot
+      - WEBPROXY_ENABLED=false
+      - LOCAL_NETWORK= 172.20.99.0/24
+      - NORDVPN_COUNTRY=CH
+      - NORDVPN_PROTOCOL=tcp
+      - NORDVPN_CATEGORY=legacy_p2p
+    cap_add:
+      - NET_ADMIN
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+    ports:
+      - '9091:9091'
     labels:
       - traefik.enable=true
-      - traefik.http.routers.stolpweb-rtr.entrypoints=web
-      - traefik.http.routers.stolpweb-rtr.service=stolpweb
-      - traefik.http.services.stolpweb.loadbalancer.server.port=80
-      - traefik.http.routers.stolpweb-rtr.rule=HostHeader(`$URL_STOLPWEB`)
-      - traefik.http.routers.stolpweb-rtr.middlewares=redirectToHttps@file
-      - traefik.http.routers.stolpweb-rtrs.middlewares=authelia@docker
-      - traefik.http.routers.stolpweb-rtrs.tls.domains[0].main=$URL_STOLPWEB
-      - traefik.http.routers.stolpweb-rtrs.tls=true
-      - traefik.http.routers.stolpweb-rtrs.service=stolpweb
-      - traefik.http.routers.stolpweb-rtrs.tls.certresolver=myresolver
-      - traefik.http.routers.stolpweb-rtrs.entrypoints=websecure
-      - traefik.http.routers.stolpweb-rtrs.rule=HostHeader(`$URL_STOLPWEB`)
+      - traefik.http.routers.torrent-rtr.entrypoints=web
+      - traefik.http.routers.torrent-rtr.service=torrent
+      - traefik.http.services.torrent.loadbalancer.server.port=9091
+      - traefik.http.routers.torrent-rtr.rule=HostHeader(`$URL_TORRENT`)
+      - traefik.http.routers.torrent-rtr.middlewares=redirect-to-https
+      - traefik.http.routers.torrent-rtrs.middlewares=authelia@docker
+      - traefik.http.routers.torrent-rtrs.service=torrent
+      - traefik.http.routers.torrent-rtrs.tls=true
+      - traefik.http.routers.torrent-rtrs.tls.certresolver=myresolver
+      - traefik.http.routers.torrent-rtrs.tls.domains[0].main=$URL_TORRENT
+      - traefik.http.routers.torrent-rtrs.entrypoints=websecure
+      - traefik.http.routers.torrent-rtrs.rule=HostHeader(`$URL_TORRENT`)
 
   traefik:
     image: traefik
     container_name: traefik
     restart: always
     ports:
-      - 80:80
       - 202:22
+      - 80:80
       - 443:443
+      - 3306:3306
       - 8080:8080
     command: 
-      - --log.level=DEBUG
-      - --api.insecure=true
+      - --log.level=info
+#      - --api.insecure=true
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.docker.swarmMode=false
       - --providers.file.directory=/rules
       - --providers.file.watch=true
+      - --entryPoints.ssh.address=:202
       - --entryPoints.web.address=:80
       - --entryPoints.websecure.address=:443
-      - --entryPoints.ssh.address=:22
+      - --entryPoints.mysql.address=:3306
       - --accesslog=true
       - --accesslog.filepath=/data/access.log
       - --certificatesResolvers.myresolver.acme.httpChallenge=true
-      #- --certificatesResolvers.myresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
+#      - --certificatesResolvers.myresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
       - --certificatesResolvers.myresolver.acme.httpChallenge.entryPoint=web
       - --certificatesResolvers.myresolver.acme.email=floris@vanenter.nl
       - --certificatesResolvers.myresolver.acme.storage=/letsencrypt/acme.json
@@ -388,7 +444,7 @@ services:
       - traefik.http.routers.traefik-rtr.rule=HostHeader(`$URL_TRAEFIK`)
       - traefik.http.routers.traefik-rtr.entrypoints=web
       - traefik.http.routers.traefik-rtr.service=api@internal
-      - traefik.http.routers.traefik-rtr.middlewares=redirectToHttps@file
+      - traefik.http.routers.traefik-rtr.middlewares=redirect-to-https
       - traefik.http.routers.traefik-rtrs.middlewares=authelia@docker
       - traefik.http.routers.traefik-rtrs.rule=HostHeader(`$URL_TRAEFIK`)
       - traefik.http.routers.traefik-rtrs.entrypoints=websecure
@@ -396,3 +452,5 @@ services:
       - traefik.http.routers.traefik-rtrs.tls=true
       - traefik.http.routers.traefik-rtrs.tls.domains[0].main=$URL_TRAEFIK
       - traefik.http.routers.traefik-rtrs.tls.certresolver=myresolver
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https
